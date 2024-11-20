@@ -12,10 +12,13 @@ import moment from "moment";
 import { useState, useEffect } from "react";
 import { useForkRef } from "@mui/material";
 import "moment/dist/locale/ar-dz";
+import {Commet} from 'react-loading-indicators'
 moment.locale("ar");
 export default function MainContent() {
 	// STATES
+	const [loading, setLoading] = useState(true);
 	const [nextPrayerIndex, setNextPrayerIndex] = useState(2);
+	// Fajr: "04:20",
 	const [timings, setTimings] = useState({
 		Fajr: "04:20",
 		Dhuhr: "11:50",
@@ -23,16 +26,16 @@ export default function MainContent() {
 		Sunset: "18:03",
 		Isha: "19:33",
 	});
-
 	const [remainingTime, setRemainingTime] = useState("");
-
 	const [selectedCity, setSelectedCity] = useState({
 		displayName: "مكة المكرمة",
 		apiName: "Makkah al Mukarramah",
 	});
-
 	const [today, setToday] = useState("");
-
+		// {
+		// 	displayName: "مكة المكرمة",
+		// 	apiName: "Makkah al Mukarramah",
+		// },
 	const avilableCities = [
 		{
 			displayName: "مكة المكرمة",
@@ -47,112 +50,79 @@ export default function MainContent() {
 			apiName: "Dammam",
 		},
 	];
-
+	// { key: "Fajr",   displayName: "الفجر" },
 	const prayersArray = [
-		{ key: "Fajr", displayName: "الفجر" },
-		{ key: "Dhuhr", displayName: "الظهر" },
-		{ key: "Asr", displayName: "العصر" },
+		{ key: "Fajr",   displayName: "الفجر" },
+		{ key: "Dhuhr",  displayName: "الظهر" },
+		{ key: "Asr",    displayName: "العصر" },
 		{ key: "Sunset", displayName: "المغرب" },
-		{ key: "Isha", displayName: "العشاء" },
+		{ key: "Isha",   displayName: "العشاء" },
 	];
 	const getTimings = async () => {
-		console.log("calling the api");
-		const response = await axios.get(
-			`https://api.aladhan.com/v1/timingsByCity?country=SA&city=${selectedCity.apiName}`
-		);
-		setTimings(response.data.data.timings);
+		try{
+			const response = await axios.get(`https://api.aladhan.com/v1/timingsByCity?country=SA&city=${selectedCity.apiName}`);
+			setTimings(response.data.data.timings);	
+			setLoading(false)
+		} catch(error){
+			throw new Error('there is an error in the data !!!')
+		}
 	};
 	useEffect(() => {
 		getTimings();
 	}, [selectedCity]);
 
+
 	useEffect(() => {
 		let interval = setInterval(() => {
-			console.log("calling timer");
 			setupCountdownTimer();
 		}, 1000);
 
 		const t = moment();
-		setToday(t.format("MMM Do YYYY | h:mm"));
+		setToday(t.format("dddd, MMM Do / YYYY | h:mm A"));
 
 		return () => {
 			clearInterval(interval);
 		};
 	}, [timings]);
 
-	// const data = await axios.get(
-	// 	"https://api.aladhan.com/v1/timingsByCity?country=SA&city=Riyadh"
-	// );
-
 	const setupCountdownTimer = () => {
-		const momentNow = moment();
+		  const momentNow = moment();
+		  let nextPrayerIndex = 0;
 
-		let prayerIndex = 2;
+		  // Find the next prayer by comparing current time
+		  for (let i = 0; i < prayersArray.length; i++) {
+		    const prayerTime = moment(timings[prayersArray[i].key], "HH:mm"); // 24 system hour not 12 system hour
+		    if (momentNow.isBefore(prayerTime)) {
+		      nextPrayerIndex = i;
+		      break;
+		    }
+		  }
 
-		if (
-			momentNow.isAfter(moment(timings["Fajr"], "hh:mm")) &&
-			momentNow.isBefore(moment(timings["Dhuhr"], "hh:mm"))
-		) {
-			prayerIndex = 1;
-		} else if (
-			momentNow.isAfter(moment(timings["Dhuhr"], "hh:mm")) &&
-			momentNow.isBefore(moment(timings["Asr"], "hh:mm"))
-		) {
-			prayerIndex = 2;
-		} else if (
-			momentNow.isAfter(moment(timings["Asr"], "hh:mm")) &&
-			momentNow.isBefore(moment(timings["Sunset"], "hh:mm"))
-		) {
-			prayerIndex = 3;
-		} else if (
-			momentNow.isAfter(moment(timings["Sunset"], "hh:mm")) &&
-			momentNow.isBefore(moment(timings["Isha"], "hh:mm"))
-		) {
-			prayerIndex = 4;
-		} else {
-			prayerIndex = 0;
-		}
+		  const nextPrayer = prayersArray[nextPrayerIndex];
+		  const nextPrayerTime = moment(timings[nextPrayer.key], "HH:mm");
+		  const remainingTimeMs = nextPrayerTime.diff(momentNow);
 
-		setNextPrayerIndex(prayerIndex);
-
-		// now after knowing what the next prayer is, we can setup the countdown timer by getting the prayer's time
-		const nextPrayerObject = prayersArray[prayerIndex];
-		const nextPrayerTime = timings[nextPrayerObject.key];
-		const nextPrayerTimeMoment = moment(nextPrayerTime, "hh:mm");
-
-		let remainingTime = moment(nextPrayerTime, "hh:mm").diff(momentNow);
-
-		if (remainingTime < 0) {
-			const midnightDiff = moment("23:59:59", "hh:mm:ss").diff(momentNow);
-			const fajrToMidnightDiff = nextPrayerTimeMoment.diff(
-				moment("00:00:00", "hh:mm:ss")
-			);
-
-			const totalDiffernce = midnightDiff + fajrToMidnightDiff;
-
-			remainingTime = totalDiffernce;
-		}
-		console.log(remainingTime);
-
-		const durationRemainingTime = moment.duration(remainingTime);
-
-		setRemainingTime(
-			`${durationRemainingTime.seconds()} : ${durationRemainingTime.minutes()} : ${durationRemainingTime.hours()}`
-		);
-		console.log(
-			"duration issss ",
-			durationRemainingTime.hours(),
-			durationRemainingTime.minutes(),
-			durationRemainingTime.seconds()
-		);
+		  const duration = moment.duration(remainingTimeMs);
+		  setRemainingTime(
+		    `${duration.hours()}:${duration.minutes()}:${duration.seconds()}`
+		  );
+		  setNextPrayerIndex(nextPrayerIndex);
 	};
+
 	const handleCityChange = (event) => {
-		const cityObject = avilableCities.find((city) => {
-			return city.apiName == event.target.value;
-		});
-		console.log("the new value is ", event.target.value);
+		const cityObject = avilableCities.find(city => city.apiName == event.target.value );
 		setSelectedCity(cityObject);
 	};
+
+	if(loading){
+		return (
+			<div style={{height: '100vh', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+				<h1>
+					<Commet color="#32cd32" size="medium" text="" textColor="" />
+				</h1>
+			</div>
+		)
+	}
 
 	return (
 		<>
@@ -183,33 +153,21 @@ export default function MainContent() {
 			<Stack
 				direction="row"
 				justifyContent={"space-around"}
-				style={{ marginTop: "50px" }}
+				style={{ marginTop: "50px", flexWrap: 'wrap' }}
 			>
-				<Prayer
-					name="الفجر"
-					time={timings.Fajr}
-					image="https://wepik.com/api/image/ai/9a07baa7-b49b-4f6b-99fb-2d2b908800c2"
-				/>
-				<Prayer
-					name="الظهر"
-					time={timings.Dhuhr}
-					image="https://wepik.com/api/image/ai/9a07bb45-6a42-4145-b6aa-2470408a2921"
-				/>
-				<Prayer
-					name="العصر"
-					time={timings.Asr}
-					image="https://wepik.com/api/image/ai/9a07bb90-1edc-410f-a29a-d260a7751acf"
-				/>
-				<Prayer
-					name="المغرب"
-					time={timings.Sunset}
-					image="https://wepik.com/api/image/ai/9a07bbe3-4dd1-43b4-942e-1b2597d4e1b5"
-				/>
-				<Prayer
-					name="العشاء"
-					time={timings.Isha}
-					image="https://wepik.com/api/image/ai/9a07bc25-1200-4873-8743-1c370e9eff4d"
-				/>
+			{
+				Object.entries(timings).map(([key, value]) => {
+					const prayer = prayersArray.find((name) => name.key === key);
+					if(!prayer) return null;
+					return(
+						<Prayer 
+							key={key}
+							name = {prayer.displayName}
+							time={value}
+						/>
+					)
+				})
+			} 
 			</Stack>
 			{/*== PRAYERS CARDS ==*/}
 
@@ -219,7 +177,7 @@ export default function MainContent() {
 				justifyContent={"center"}
 				style={{ marginTop: "40px" }}
 			>
-				<FormControl style={{ width: "20%" }}>
+				<FormControl sx={{ width: "20%", color: "white" }}>
 					<InputLabel id="demo-simple-select-label">
 						<span style={{ color: "white" }}>المدينة</span>
 					</InputLabel>
@@ -227,7 +185,7 @@ export default function MainContent() {
 						style={{ color: "white" }}
 						labelId="demo-simple-select-label"
 						id="demo-simple-select"
-						// value={age}
+						value={selectedCity.apiName}
 						label="Age"
 						onChange={handleCityChange}
 					>
