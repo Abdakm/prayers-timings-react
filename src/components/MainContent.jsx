@@ -1,16 +1,8 @@
-import React from "react";
-import Grid from "@mui/material/Unstable_Grid2";
-import Divider from "@mui/material/Divider";
-import Stack from "@mui/material/Stack";
-import Prayer from "./Prayer";
-import InputLabel from "@mui/material/InputLabel";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import Select from "@mui/material/Select";
+import { Grid, Divider, Stack, InputLabel, MenuItem, FormControl, Select} from './MuiBox'
+import { Prayer, Toggle } from "./Box";
 import axios from "axios";
 import moment from "moment";
 import { useState, useEffect } from "react";
-import { useForkRef } from "@mui/material";
 import "moment/dist/locale/ar-dz";
 import {Commet} from 'react-loading-indicators'
 moment.locale("ar");
@@ -103,9 +95,17 @@ export default function MainContent() {
 		  const remainingTimeMs = nextPrayerTime.diff(momentNow);
 
 		  const duration = moment.duration(remainingTimeMs);
-		  setRemainingTime(
-		    `${duration.hours()}:${duration.minutes()}:${duration.seconds()}`
-		  );
+		  let hours = duration.hours() > 9 ? duration.hours() : '0'+duration.hours();
+		  let minutes = duration.minutes() > 9 ? duration.minutes() : '0'+duration.minutes();
+		  let seconds = duration.seconds() > 9 ? duration.seconds() : '0'+duration.seconds();
+
+		  if(duration.hours() <= 0){
+		  	setRemainingTime(`${hours}: ${seconds}`)
+		  } else if(duration.hours() <= 0 && duration.minutes() <= 0){
+		  	setRemainingTime(`${seconds}`)
+		  } else {
+		  	setRemainingTime(`${hours}:${minutes}:${seconds}`);		  	
+		  }
 		  setNextPrayerIndex(nextPrayerIndex);
 	};
 
@@ -128,14 +128,14 @@ export default function MainContent() {
 		<>
 			{/* TOP ROW */}
 			<Grid container>
-				<Grid xs={6}>
+				<Grid xs={5} style={{placeItems: 'center'}}>
 					<div>
 						<h2>{today}</h2>
 						<h1>{selectedCity.displayName}</h1>
 					</div>
 				</Grid>
 
-				<Grid xs={6}>
+				<Grid xs={5} style={{placeItems: 'center'}}>
 					<div>
 						<h2>
 							متبقي حتى صلاة{" "}
@@ -144,43 +144,38 @@ export default function MainContent() {
 						<h1>{remainingTime}</h1>
 					</div>
 				</Grid>
+
+				<Grid xs={2} style={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+					<div style={{width: '100%', height: '100%'}}>
+						<Toggle />
+					</div>
+				</Grid>
 			</Grid>
 			{/*== TOP ROW ==*/}
 
 			<Divider style={{ borderColor: "white", opacity: "0.1" }} />
 
 			{/* PRAYERS CARDS */}
-			<Stack
-				direction="row"
-				justifyContent={"space-around"}
-				style={{ marginTop: "50px", flexWrap: 'wrap' }}
-			>
-			{
-				Object.entries(timings).map(([key, value]) => {
-					const prayer = prayersArray.find((name) => name.key === key);
-					if(!prayer) return null;
-					return(
-						<Prayer 
-							key={key}
-							name = {prayer.displayName}
-							time={value}
-						/>
-					)
-				})
-			} 
+			<Stack direction="row" justifyContent={"space-around"} style={{ marginTop: "50px", flexWrap: 'wrap' }} >
+				{
+					Object.entries(timings).map(([key, value]) => {
+						const prayer = prayersArray.find((name) => name.key === key);
+						if(!prayer) return null;
+						return(
+							<Prayer 
+								key={key}
+								name = {prayer.displayName}
+								time={value}
+							/>
+						)
+					})
+				} 
 			</Stack>
-			{/*== PRAYERS CARDS ==*/}
 
 			{/* SELECT CITY */}
-			<Stack
-				direction="row"
-				justifyContent={"center"}
-				style={{ marginTop: "40px" }}
-			>
+			<Stack direction="row" justifyContent={"center"} style={{ marginTop: "40px" }} >
 				<FormControl sx={{ width: "20%", color: "white" }}>
-					<InputLabel id="demo-simple-select-label">
-						<span style={{ color: "white" }}>المدينة</span>
-					</InputLabel>
+					<InputLabel id="demo-simple-select-label"> <span style={{ color: "white" }}>المدينة</span> </InputLabel>
 					<Select
 						style={{ color: "white" }}
 						labelId="demo-simple-select-label"
